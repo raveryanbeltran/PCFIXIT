@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class ComponentDrag : MonoBehaviour
 {
-    private TaskManager taskManager;
     private Vector3 offset;
     private Vector3 screenPoint;
     private Vector3 originalPosition;
@@ -21,6 +20,12 @@ public class ComponentDrag : MonoBehaviour
 
     [Header("Rotation Settings")]
     public bool lockRotation = true;
+    
+    [Header("Snap Behavior")]
+    public bool useCustomSnapPosition = false;
+    public Vector3 customSnapPosition = Vector3.zero; // Changed from Offset to Position
+    public bool useCustomSnapRotation = false;
+    public Vector3 customSnapRotation = Vector3.zero;
 
     [Header("Snap Offset (per object)")]
     public Vector3 snapOffset = Vector3.zero; // Per-object pivot offset
@@ -36,7 +41,7 @@ public class ComponentDrag : MonoBehaviour
 
     void Start()
     {
-    originalPosition = transform.position;
+        originalPosition = transform.position;
     }
 
     private IEnumerator OnMouseDown()
@@ -99,8 +104,12 @@ public class ComponentDrag : MonoBehaviour
         {
             OccupySnapPoint(nearestSnapPoint);
 
-            // Move pivot so that the offset point aligns with the snap point
-            transform.position = nearestSnapPoint.position - (transform.rotation * snapOffset);
+            // Calculate the final position with all offsets applied
+            Vector3 finalPosition = CalculateSnapPosition(nearestSnapPoint);
+            Quaternion finalRotation = CalculateSnapRotation();
+            
+            // Apply the final position and rotation
+            transform.SetPositionAndRotation(finalPosition, finalRotation);
             
             // Notify TaskManager that this component has been snapped
             if (!hasBeenSnapped && TaskManager.Instance != null)
@@ -109,10 +118,35 @@ public class ComponentDrag : MonoBehaviour
                 hasBeenSnapped = true;
             }
         }
+    }
 
-        if (nearestSnapPoint != null && TaskManager.Instance != null)
-         {
-            TaskManager.Instance.CompleteTask(componentName);
+    private Vector3 CalculateSnapPosition(Transform snapPoint)
+    {
+        if (useCustomSnapPosition)
+        {
+            // Use absolute custom position (ignores snap point position)
+            return customSnapPosition;
+        }
+        else
+        {
+            // Use the original offset method (pivot alignment relative to snap point)
+            return snapPoint.position - (transform.rotation * snapOffset);
+        }
+    }
+
+    private Quaternion CalculateSnapRotation()
+    {
+        if (useCustomSnapRotation)
+        {
+            return Quaternion.Euler(customSnapRotation);
+        }
+        else if (lockRotation)
+        {
+            return Quaternion.identity;
+        }
+        else
+        {
+            return transform.rotation;
         }
     }
 
@@ -144,7 +178,8 @@ public class ComponentDrag : MonoBehaviour
                 occupiedSnapPoints.Remove(currentSnapPoint);
             }
         }
-        if (TaskManager.Instance != null)
+        
+        if (TaskManager.Instance != null && hasBeenSnapped)
         {
             TaskManager.Instance.ResetTask(componentName);
         }
@@ -179,17 +214,64 @@ public class ComponentDrag : MonoBehaviour
     }
 
     // Draw gizmos so you can see the offset in the Scene view
-    private void OnDrawGizmosSelected()
+private void OnDrawGizmosSelected()
+{
+    Gizmos.color = Color.yellow;
+
+    // Calculate where the object will snap to (with offset)
+    Vector3 snapPointPos = transform.position + (transform.rotation * snapOffset);
+
+    // Draw a wireframe cube at that position
+    Gizmos.DrawWireCube(snapPointPos, gizmoCubeSize);
+
+    // Optional: Draw a line from the object's pivot to the snap offset
+    Gizmos.DrawLine(transform.position, snapPointPos);
+    
+    // Draw custom snap position if enabled
+    if (useCustomSnapPosition)
     {
-        Gizmos.color = Color.yellow;
-
-        // Calculate where the object will snap to (with offset)
-        Vector3 snapPointPos = transform.position + (transform.rotation * snapOffset);
-
-        // Draw a wireframe cube at that position
-        Gizmos.DrawWireCube(snapPointPos, gizmoCubeSize);
-
-        // Optional: Draw a line from the object's pivot to the snap offset
-        Gizmos.DrawLine(transform.position, snapPointPos);
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(customSnapPosition, 0.1f);
+        Gizmos.DrawLine(transform.position, customSnapPosition);
     }
+    
+    // Draw snap distance spheres around all snap points
+    DrawSnapDistanceGizmos();
+}
+
+// New method to draw snap distance visualization
+private void DrawSnapDistanceGizmos()
+{
+    if (snapPoints == null || snapPoints.Length == 0)
+        return;
+
+    foreach (Transform snapPoint in snapPoints)
+    {
+        if (snapPoint == null)
+            continue;
+
+        // Check if this snap point is occupied
+        bool isOccupied = occupiedSnapPoints.ContainsKey(snapPoint) && occupiedSnapPoints[snapPoint] != null;
+        
+        // Set color based on occupancy
+        Gizmos.color = isOccupied ? Color.red : Color.green;
+        
+        // Draw wire sphere showing snap distance
+        Gizmos.DrawWireSphere(snapPoint.position, snapDistance);
+        
+        // Draw a smaller solid sphere at the snap point position
+        Gizmos.color = isOccupied ? Color.red : Color.blue;
+        Gizmos.DrawSphere(snapPoint.position, 0.05f);
+        
+        // Draw line from snap point to show orientation (if needed)
+        Gizmos.color = Color.white;
+        Gizmos.DrawLine(snapPoint.position, snapPoint.position + snapPoint.forward * 0.2f);
+        
+        // Label the snap point with its name
+        #if UNITY_EDITOR
+        UnityEditor.Handles.color = Color.white;
+        UnityEditor.Handles.Label(snapPoint.position + Vector3.up * 0.1f, snapPoint.name);
+        #endif
+    }
+}
 }

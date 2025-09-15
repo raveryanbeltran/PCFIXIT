@@ -14,15 +14,34 @@ public class CameraMovement : MonoBehaviour
     public Vector3 boundsMin = new Vector3(-10f, 1f, -10f);
     public Vector3 boundsMax = new Vector3(10f, 10f, 10f);
     
+    [Header("Camera Clipping Settings")]
+    public float minNearClipPlane = 0.01f; // Very small near clipping distance
+    public float maxNearClipPlane = 0.1f;  // Default near clipping distance
+    public float zoomSensitivity = 0.1f;   // How much zoom affects clipping
+    
     private float currentMoveSpeed;
     private Vector3 initialPosition;
     private Quaternion initialRotation;
+    private Camera cam;
     
     void Start()
     {
         currentMoveSpeed = moveSpeed;
         initialPosition = transform.position;
         initialRotation = transform.rotation;
+        cam = GetComponent<Camera>();
+        
+        if (cam == null)
+        {
+            cam = Camera.main;
+            Debug.LogWarning("CameraMovement: No Camera component found. Using Camera.main.");
+        }
+        
+        // Set initial near clip plane
+        if (cam != null)
+        {
+            cam.nearClipPlane = maxNearClipPlane;
+        }
     }
     
     void Update()
@@ -99,7 +118,32 @@ public class CameraMovement : MonoBehaviour
         {
             // Move forward/backward based on scroll input
             transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+            
+            // Adjust near clipping plane based on zoom level
+            AdjustNearClipPlane(scroll);
         }
+    }
+    
+    private void AdjustNearClipPlane(float zoomDirection)
+    {
+        if (cam == null) return;
+        
+        // Calculate dynamic near clip plane based on camera's forward movement
+        // When zooming in (negative scroll), reduce near clip plane
+        // When zooming out (positive scroll), increase near clip plane
+        
+        float targetNearClip = cam.nearClipPlane;
+        
+        if (zoomDirection < 0) // Zooming in
+        {
+            targetNearClip = Mathf.Max(minNearClipPlane, cam.nearClipPlane * 0.8f);
+        }
+        else // Zooming out
+        {
+            targetNearClip = Mathf.Min(maxNearClipPlane, cam.nearClipPlane * 1.2f);
+        }
+        
+        cam.nearClipPlane = Mathf.Lerp(cam.nearClipPlane, targetNearClip, Time.deltaTime * 5f);
     }
     
     private void HandleSpeedModifier()
@@ -122,6 +166,12 @@ public class CameraMovement : MonoBehaviour
         {
             transform.position = initialPosition;
             transform.rotation = initialRotation;
+            
+            // Reset near clip plane as well
+            if (cam != null)
+            {
+                cam.nearClipPlane = maxNearClipPlane;
+            }
         }
     }
     
@@ -175,5 +225,11 @@ public class CameraMovement : MonoBehaviour
         
         transform.position = targetCamPosition;
         transform.rotation = targetRotation;
+        
+        // Reset near clip plane after focusing
+        if (cam != null)
+        {
+            cam.nearClipPlane = maxNearClipPlane;
+        }
     }
 }

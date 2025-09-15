@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     public GameObject taskPanel;
     public GameObject taskItemPrefab;
     public Text completionText;
+    public ScrollRect scrollRect; // Add reference to scroll rect if using one
 
     private TaskManager taskManager;
     private Dictionary<string, TaskUIItem> taskUIItems = new Dictionary<string, TaskUIItem>();
@@ -42,10 +43,18 @@ public class UIManager : MonoBehaviour
             {
                 taskUIItem.SetTask(task.displayName, task.isCompleted);
                 taskUIItems.Add(task.componentName, taskUIItem);
+                
+                // Force content size fitter to update
+                ContentSizeFitter fitter = taskUI.GetComponent<ContentSizeFitter>();
+                if (fitter != null)
+                {
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(taskUI.transform as RectTransform);
+                }
             }
         }
         
         UpdateCompletionText();
+        RefreshLayout(); // Refresh the entire layout
     }
 
     void UpdateUI()
@@ -59,6 +68,29 @@ public class UIManager : MonoBehaviour
         }
         
         UpdateCompletionText();
+        RefreshLayout(); // Refresh after updates
+    }
+    
+    void RefreshLayout()
+    {
+        // Refresh all layouts to handle text changes
+        Canvas.ForceUpdateCanvases();
+        
+        // Refresh scroll view if exists
+        if (scrollRect != null)
+        {
+            scrollRect.verticalNormalizedPosition = 1f; // Scroll to top
+            LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
+        }
+        
+        // Refresh task panel layout
+        LayoutRebuilder.ForceRebuildLayoutImmediate(taskPanel.transform as RectTransform);
+        
+        // Refresh content size fitters
+        foreach (var contentFitter in taskPanel.GetComponentsInChildren<ContentSizeFitter>())
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentFitter.transform as RectTransform);
+        }
     }
     
     void UpdateCompletionText()
