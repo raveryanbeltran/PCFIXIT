@@ -23,20 +23,23 @@ public class ComponentDrag : MonoBehaviour
     
     [Header("Snap Behavior")]
     public bool useCustomSnapPosition = false;
-    public Vector3 customSnapPosition = Vector3.zero; // Changed from Offset to Position
+    public Vector3 customSnapPosition = Vector3.zero;
     public bool useCustomSnapRotation = false;
     public Vector3 customSnapRotation = Vector3.zero;
 
     [Header("Snap Offset (per object)")]
-    public Vector3 snapOffset = Vector3.zero; // Per-object pivot offset
+    public Vector3 snapOffset = Vector3.zero;
 
     [Header("Gizmo Settings")]
-    public Vector3 gizmoCubeSize = new Vector3(0.2f, 0.2f, 0.2f); // Editable in Inspector
+    public Vector3 gizmoCubeSize = new Vector3(0.2f, 0.2f, 0.2f);
 
-    // Track if this component has been snapped (to prevent multiple completions)
+    [Header("Tool Requirements")]
+    public bool requiresTool = true;
+
+    // Track if this component has been snapped
     private bool hasBeenSnapped = false;
 
-    // Static dictionary to track occupied snap points across all instances
+    // Static dictionary to track occupied snap points
     private static Dictionary<Transform, ComponentDrag> occupiedSnapPoints = new Dictionary<Transform, ComponentDrag>();
 
     void Start()
@@ -46,6 +49,12 @@ public class ComponentDrag : MonoBehaviour
 
     private IEnumerator OnMouseDown()
     {
+        // Check tool requirements before allowing drag
+        if (requiresTool && !CheckToolRequirements())
+        {
+            yield break; // Exit if tool requirements not met
+        }
+
         isDragging = true;
 
         if (currentSnapPoint != null)
@@ -102,16 +111,19 @@ public class ComponentDrag : MonoBehaviour
 
         if (nearestSnapPoint != null)
         {
+            // Final tool check before snapping
+            if (requiresTool && !CheckToolRequirements())
+            {
+                return; // Cancel snap if tool requirements not met
+            }
+
             OccupySnapPoint(nearestSnapPoint);
 
-            // Calculate the final position with all offsets applied
             Vector3 finalPosition = CalculateSnapPosition(nearestSnapPoint);
             Quaternion finalRotation = CalculateSnapRotation();
             
-            // Apply the final position and rotation
             transform.SetPositionAndRotation(finalPosition, finalRotation);
             
-            // Notify TaskManager that this component has been snapped
             if (!hasBeenSnapped && TaskManager.Instance != null)
             {
                 TaskManager.Instance.CompleteTask(componentName);
@@ -120,16 +132,97 @@ public class ComponentDrag : MonoBehaviour
         }
     }
 
+    // TOOL MANAGEMENT INTEGRATION
+    private bool CheckToolRequirements()
+    {
+        if (ToolManager.Instance == null)
+        {
+            Debug.LogWarning("ToolManager not found in scene!");
+            return true; // Allow without tools if manager missing
+        }
+
+        bool canInstall = ToolManager.Instance.CanInstallComponent(componentName);
+        
+        if (!canInstall)
+        {
+            string errorMessage = ToolManager.Instance.GetRequiredToolMessage(componentName);
+            ToolManager.ToolType requiredTool = ToolManager.Instance.GetRequiredToolType(componentName); // Fixed: Added ToolManager. prefix
+            ShowToolError(errorMessage, requiredTool);
+        }
+
+        return canInstall;
+    }
+
+    private void ShowToolError(string message, ToolManager.ToolType requiredTool) // Fixed: Added ToolManager. prefix
+    {
+        Debug.LogWarning($"Tool Error: {message}");
+        
+        // Enhanced error feedback
+        StartCoroutine(ShowEnhancedErrorText(message, requiredTool));
+        
+        // Visual feedback on the component
+        StartCoroutine(FlashComponentRed());
+    }
+
+    private IEnumerator ShowEnhancedErrorText(string message, ToolManager.ToolType requiredTool) // Fixed: Added ToolManager. prefix
+    {
+        // Create world space UI text
+        GameObject errorText = new GameObject("ErrorText");
+        errorText.transform.position = transform.position + Vector3.up * 0.8f;
+        
+        TextMesh textMesh = errorText.AddComponent<TextMesh>();
+        textMesh.text = $"{message}\nRequired: {requiredTool}";
+        textMesh.color = Color.red;
+        textMesh.characterSize = 0.08f;
+        textMesh.fontSize = 40;
+        textMesh.anchor = TextAnchor.MiddleCenter;
+
+        // Make text face camera
+        errorText.transform.LookAt(Camera.main.transform);
+        errorText.transform.Rotate(0, 180, 0);
+
+        // Add background panel
+        GameObject background = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        background.transform.SetParent(errorText.transform);
+        background.transform.localPosition = new Vector3(0, 0, 0.01f);
+        background.transform.localScale = new Vector3(2f, 0.8f, 1f);
+        
+        Renderer bgRenderer = background.GetComponent<Renderer>();
+        bgRenderer.material.color = new Color(0, 0, 0, 0.8f);
+
+        Destroy(errorText, 4f);
+        yield return null;
+    }
+
+    private IEnumerator FlashComponentRed()
+    {
+        Renderer renderer = GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            Color originalColor = renderer.material.color;
+            float flashDuration = 0.5f;
+            float elapsed = 0f;
+            
+            while (elapsed < flashDuration)
+            {
+                float t = Mathf.PingPong(elapsed * 4f, 1f);
+                renderer.material.color = Color.Lerp(originalColor, Color.red, t);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            renderer.material.color = originalColor;
+        }
+    }
+
     private Vector3 CalculateSnapPosition(Transform snapPoint)
     {
         if (useCustomSnapPosition)
         {
-            // Use absolute custom position (ignores snap point position)
             return customSnapPosition;
         }
         else
         {
-            // Use the original offset method (pivot alignment relative to snap point)
             return snapPoint.position - (transform.rotation * snapOffset);
         }
     }
@@ -185,8 +278,6 @@ public class ComponentDrag : MonoBehaviour
         }
 
         currentSnapPoint = null;
-        
-        // Reset the snapped status if the component is removed
         hasBeenSnapped = false;
     }
 
@@ -214,64 +305,64 @@ public class ComponentDrag : MonoBehaviour
     }
 
     // Draw gizmos so you can see the offset in the Scene view
-private void OnDrawGizmosSelected()
-{
-    Gizmos.color = Color.yellow;
-
-    // Calculate where the object will snap to (with offset)
-    Vector3 snapPointPos = transform.position + (transform.rotation * snapOffset);
-
-    // Draw a wireframe cube at that position
-    Gizmos.DrawWireCube(snapPointPos, gizmoCubeSize);
-
-    // Optional: Draw a line from the object's pivot to the snap offset
-    Gizmos.DrawLine(transform.position, snapPointPos);
-    
-    // Draw custom snap position if enabled
-    if (useCustomSnapPosition)
+    private void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(customSnapPosition, 0.1f);
-        Gizmos.DrawLine(transform.position, customSnapPosition);
+        Gizmos.color = Color.yellow;
+
+        // Calculate where the object will snap to (with offset)
+        Vector3 snapPointPos = transform.position + (transform.rotation * snapOffset);
+
+        // Draw a wireframe cube at that position
+        Gizmos.DrawWireCube(snapPointPos, gizmoCubeSize);
+
+        // Optional: Draw a line from the object's pivot to the snap offset
+        Gizmos.DrawLine(transform.position, snapPointPos);
+        
+        // Draw custom snap position if enabled
+        if (useCustomSnapPosition)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(customSnapPosition, 0.1f);
+            Gizmos.DrawLine(transform.position, customSnapPosition);
+        }
+        
+        // Draw snap distance spheres around all snap points
+        DrawSnapDistanceGizmos();
     }
-    
-    // Draw snap distance spheres around all snap points
-    DrawSnapDistanceGizmos();
-}
 
-// New method to draw snap distance visualization
-private void DrawSnapDistanceGizmos()
-{
-    if (snapPoints == null || snapPoints.Length == 0)
-        return;
-
-    foreach (Transform snapPoint in snapPoints)
+    // New method to draw snap distance visualization
+    private void DrawSnapDistanceGizmos()
     {
-        if (snapPoint == null)
-            continue;
+        if (snapPoints == null || snapPoints.Length == 0)
+            return;
 
-        // Check if this snap point is occupied
-        bool isOccupied = occupiedSnapPoints.ContainsKey(snapPoint) && occupiedSnapPoints[snapPoint] != null;
-        
-        // Set color based on occupancy
-        Gizmos.color = isOccupied ? Color.red : Color.green;
-        
-        // Draw wire sphere showing snap distance
-        Gizmos.DrawWireSphere(snapPoint.position, snapDistance);
-        
-        // Draw a smaller solid sphere at the snap point position
-        Gizmos.color = isOccupied ? Color.red : Color.blue;
-        Gizmos.DrawSphere(snapPoint.position, 0.05f);
-        
-        // Draw line from snap point to show orientation (if needed)
-        Gizmos.color = Color.white;
-        Gizmos.DrawLine(snapPoint.position, snapPoint.position + snapPoint.forward * 0.2f);
-        
-        // Label the snap point with its name
-        #if UNITY_EDITOR
-        UnityEditor.Handles.color = Color.white;
-        UnityEditor.Handles.Label(snapPoint.position + Vector3.up * 0.1f, snapPoint.name);
-        #endif
+        foreach (Transform snapPoint in snapPoints)
+        {
+            if (snapPoint == null)
+                continue;
+
+            // Check if this snap point is occupied
+            bool isOccupied = occupiedSnapPoints.ContainsKey(snapPoint) && occupiedSnapPoints[snapPoint] != null;
+
+            // Set color based on occupancy
+            Gizmos.color = isOccupied ? Color.red : Color.green;
+
+            // Draw wire sphere showing snap distance
+            Gizmos.DrawWireSphere(snapPoint.position, snapDistance);
+
+            // Draw a smaller solid sphere at the snap point position
+            Gizmos.color = isOccupied ? Color.red : Color.blue;
+            Gizmos.DrawSphere(snapPoint.position, 0.05f);
+
+            // Draw line from snap point to show orientation (if needed)
+            Gizmos.color = Color.white;
+            Gizmos.DrawLine(snapPoint.position, snapPoint.position + snapPoint.forward * 0.2f);
+
+            // Label the snap point with its name
+            #if UNITY_EDITOR
+            UnityEditor.Handles.color = Color.white;
+            UnityEditor.Handles.Label(snapPoint.position + Vector3.up * 0.1f, snapPoint.name);
+            #endif
+        }
     }
-}
 }

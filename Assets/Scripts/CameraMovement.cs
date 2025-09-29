@@ -74,11 +74,11 @@ public class CameraMovement : MonoBehaviour
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
             moveDirection += transform.right;
         
-        // Up/Down (World space)
-        if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.PageUp))
-            moveDirection += Vector3.up;
-        if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.PageDown))
-            moveDirection += Vector3.down;
+        // // Up/Down (World space)
+        // if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.PageUp))
+        //     moveDirection += Vector3.up;
+        // if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.PageDown))
+        //     moveDirection += Vector3.down;
         
         // Normalize and apply movement
         if (moveDirection != Vector3.zero)
