@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9a6f12a134084fd4a8163acec3aecef6
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 204016
+  packageName: POLY computer constructor
+  packageVersion: 1.0
+  assetPath: Assets/POLY_computer/material/Materials/glass.mat
+  uploadId: 467304

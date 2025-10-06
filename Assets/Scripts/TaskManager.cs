@@ -29,7 +29,7 @@ public class TaskManager : MonoBehaviour
         else
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // Optional: keep between scenes
+            DontDestroyOnLoad(gameObject);
         }
     }
     
@@ -40,7 +40,11 @@ public class TaskManager : MonoBehaviour
             if (task.componentName == componentName && !task.isCompleted)
             {
                 task.isCompleted = true;
+                Debug.Log($"Task completed: {componentName}");
                 OnTasksUpdated?.Invoke();
+                
+                // Check if all tasks are now complete
+                CheckAllTasksCompleted();
                 return;
             }
         }
@@ -66,5 +70,22 @@ public class TaskManager : MonoBehaviour
             if (!task.isCompleted) return false;
         }
         return true;
+    }
+
+    // NEW METHOD: Check if all tasks are completed and notify GameManager
+    public void CheckAllTasksCompleted()
+    {
+        if (AllTasksCompleted())
+        {
+            Debug.Log("All tasks completed! Notifying GameManager...");
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.CompleteGame();
+            }
+            else
+            {
+                Debug.LogError("GameManager instance is null!");
+            }
+        }
     }
 }

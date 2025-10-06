@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 28fe2baf32625024e9e823f4697335fb
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 204016
+  packageName: POLY computer constructor
+  packageVersion: 1.0
+  assetPath: Assets/POLY_computer/Prefabs/assembled_block/jarst_computer_case.prefab
+  uploadId: 467304

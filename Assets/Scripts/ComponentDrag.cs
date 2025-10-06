@@ -33,8 +33,12 @@ public class ComponentDrag : MonoBehaviour
     [Header("Gizmo Settings")]
     public Vector3 gizmoCubeSize = new Vector3(0.2f, 0.2f, 0.2f);
 
+    [Header("Pre-Snapped Settings")]
+    public bool startPreSnapped = false;
+    public Transform preSnappedPoint;
+
     [Header("Tool Requirements")]
-    public bool requiresTool = true;
+    public bool requiresTool = false;
 
     // Track if this component has been snapped
     private bool hasBeenSnapped = false;
@@ -45,6 +49,45 @@ public class ComponentDrag : MonoBehaviour
     void Start()
     {
         originalPosition = transform.position;
+
+        // Handle pre-snapped initialization
+    if (startPreSnapped && preSnappedPoint != null)
+    {
+        InitializePreSnapped();
+    }
+    }
+
+    private void InitializePreSnapped()
+    {
+    if (preSnappedPoint == null)
+    {
+        Debug.LogWarning($"Pre-snapped point not assigned for {componentName}", this);
+        return;
+    }
+
+    // Check if the assigned snap point is available
+    if (occupiedSnapPoints.ContainsKey(preSnappedPoint) && occupiedSnapPoints[preSnappedPoint] != null)
+    {
+        Debug.LogWarning($"Pre-snapped point {preSnappedPoint.name} is already occupied for {componentName}", this);
+        return;
+    }
+
+    // Occupy the snap point and position the component
+    OccupySnapPoint(preSnappedPoint);
+    
+    Vector3 finalPosition = CalculateSnapPosition(preSnappedPoint);
+    Quaternion finalRotation = CalculateSnapRotation();
+    
+    transform.SetPositionAndRotation(finalPosition, finalRotation);
+    
+    // Notify TaskManager if needed
+    if (TaskManager.Instance != null)
+    {
+        TaskManager.Instance.CompleteTask(componentName);
+        hasBeenSnapped = true;
+    }
+    
+    Debug.Log($"{componentName} started pre-snapped to {preSnappedPoint.name}");
     }
 
     private IEnumerator OnMouseDown()
@@ -250,6 +293,7 @@ public class ComponentDrag : MonoBehaviour
             ReleaseSnapPoint();
         }
 
+        // Update the static dictionary to track occupancy :cite[3]
         if (occupiedSnapPoints.ContainsKey(snapPoint))
         {
             occupiedSnapPoints[snapPoint] = this;
@@ -261,7 +305,6 @@ public class ComponentDrag : MonoBehaviour
 
         currentSnapPoint = snapPoint;
     }
-
     private void ReleaseSnapPoint()
     {
         if (currentSnapPoint != null && occupiedSnapPoints.ContainsKey(currentSnapPoint))

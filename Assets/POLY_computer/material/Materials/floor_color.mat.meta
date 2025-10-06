@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 71b60b1ddf949ab4e9bfd6761d8f414e
+timeCreated: 1532654078
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 204016
+  packageName: POLY computer constructor
+  packageVersion: 1.0
+  assetPath: Assets/POLY_computer/material/Materials/floor_color.mat
+  uploadId: 467304
