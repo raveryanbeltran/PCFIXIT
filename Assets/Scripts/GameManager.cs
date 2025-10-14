@@ -20,6 +20,9 @@ public class GameManager : MonoBehaviour
     [Header("Score Data")]
     public LevelData currentLevelData;
     
+    // NEW: Star penalties field in the main GameManager class
+    private int starPenalties = 0;
+    
     [System.Serializable]
     public class LevelData
     {
@@ -27,6 +30,7 @@ public class GameManager : MonoBehaviour
         public float bestTime;
         public bool isCompleted;
         public int starsEarned;
+        // REMOVED: private int starPenalties = 0; // This was in the wrong place
     }
     
     // Store all level data
@@ -61,22 +65,23 @@ public class GameManager : MonoBehaviour
         isGameCompleted = false;
         startTime = Time.time;
         completionTime = 0f;
+        starPenalties = 0; // Reset penalties when starting game
         
         Debug.Log($"Game started: {currentLevelName}");
     }
-    
+
     public void CompleteGame()
     {
         if (!isGameActive || isGameCompleted) return;
-        
+
         isGameCompleted = true;
         completionTime = Time.time - startTime;
-        
+
         Debug.Log($"Game completion triggered! Time: {completionTime:F2}s");
-        
+
         // Save level progress
         SaveLevelProgress();
-        
+
         // Show completion UI
         UIManager uiManager = FindObjectOfType<UIManager>();
         if (uiManager != null)
@@ -89,6 +94,12 @@ public class GameManager : MonoBehaviour
         }
     }
     
+    public void ApplyStarPenalty()
+    {
+        starPenalties++;
+        Debug.Log($"Star penalty applied! Total penalties: {starPenalties}");
+    }
+
     private void SaveLevelProgress()
     {
         // Get or create level data
@@ -96,11 +107,11 @@ public class GameManager : MonoBehaviour
         {
             levelProgress[currentLevelName] = new LevelData { levelName = currentLevelName };
         }
-        
+
         LevelData data = levelProgress[currentLevelName];
         data.isCompleted = true;
-        
-        // FIXED: Only update best time if current time is better (lower)
+
+        // Only update best time if current time is better (lower)
         if (data.bestTime == 0 || completionTime < data.bestTime)
         {
             data.bestTime = completionTime;
@@ -110,14 +121,26 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log($"Current time: {completionTime:F2}s, Best time remains: {data.bestTime:F2}s");
         }
-        
-        // Calculate stars based on current completion time (not best time)
-        data.starsEarned = CalculateStars(completionTime);
-        
+
+        // Calculate stars based on current completion time AND penalties
+        int timeBasedStars = CalculateStars(completionTime);
+        int finalStars = Mathf.Max(0, timeBasedStars - starPenalties);
+        data.starsEarned = finalStars;
+
         // Save to PlayerPrefs
         SaveGameData();
-        
-        Debug.Log($"Level progress saved: {currentLevelName}, Current Time: {completionTime:F2}s, Best Time: {data.bestTime:F2}s, Stars: {data.starsEarned}");
+
+        Debug.Log($"Level progress saved: {currentLevelName}, Time: {completionTime:F2}s, Best Time: {data.bestTime:F2}s, Stars: {data.starsEarned} (Penalties: {starPenalties})");
+    }
+    
+    public void ResetLevel()
+    {
+        starPenalties = 0;
+        if (TaskManager.Instance != null)
+        {
+            TaskManager.Instance.ResetPenalties();
+        }
+        RestartLevel();
     }
     
     private int CalculateStars(float time)
@@ -229,14 +252,15 @@ public class GameManager : MonoBehaviour
         levelProgress.Clear();
         Debug.Log("All saved data cleared!");
     }
-    
+
     // NEW METHOD: Debug current state
     public void DebugCurrentState()
     {
         Debug.Log($"Current Level: {currentLevelName}");
         Debug.Log($"Game Active: {isGameActive}, Completed: {isGameCompleted}");
         Debug.Log($"Current Time: {GetCurrentTime():F2}s");
-        
+        Debug.Log($"Star Penalties: {starPenalties}");
+
         LevelData data = GetLevelData(currentLevelName);
         Debug.Log($"Best Time: {data.bestTime:F2}s, Stars: {data.starsEarned}, Completed: {data.isCompleted}");
     }

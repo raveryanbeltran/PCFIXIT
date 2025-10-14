@@ -30,20 +30,29 @@ public class UIManager : MonoBehaviour
     private TaskManager taskManager;
     private Dictionary<string, TaskUIItem> taskUIItems = new Dictionary<string, TaskUIItem>();
 
+    [Header("Penalty Display")]
+    public Text penaltyText;
+    public GameObject penaltyPanel;
+
     void Start()
     {
         // Set up button listeners FIRST
         SetupButtonListeners();
-        
+
         // Hide completion screen at start
         if (completionScreen != null)
             completionScreen.SetActive(false);
-        
+
+        // Hide penalty panel
+        if (penaltyPanel != null)
+            penaltyPanel.SetActive(false);
+
         // Initialize task system
         taskManager = TaskManager.Instance;
         if (taskManager != null)
         {
             taskManager.OnTasksUpdated += UpdateUI;
+            taskManager.OnStarsPenalized += OnStarsPenalized; // NEW: Listen for penalties
             InitializeUI();
         }
         else
@@ -52,6 +61,26 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private void OnStarsPenalized(int penalties)
+    {
+        if (penaltyPanel != null && penaltyText != null)
+        {
+            penaltyPanel.SetActive(true);
+            penaltyText.text = $"Wrong Component! -{penalties} Star{(penalties != 1 ? "s" : "")}\n{3 - penalties}/3 Stars Remaining";
+
+            // Auto-hide after 3 seconds
+            Invoke("HidePenaltyPanel", 3f);
+        }
+    }
+
+    private void HidePenaltyPanel()
+    {
+        if (penaltyPanel != null)
+        {
+            penaltyPanel.SetActive(false);
+        }
+    }
+    
     private void SetupButtonListeners()
     {
         // Set up button listeners for completion screen
@@ -59,12 +88,12 @@ public class UIManager : MonoBehaviour
             restartButton.onClick.AddListener(() => GameManager.Instance?.RestartLevel());
         else
             Debug.LogWarning("Restart button not assigned in UIManager");
-        
+
         if (menuButton != null)
             menuButton.onClick.AddListener(() => GameManager.Instance?.GoToMenu());
         else
             Debug.LogWarning("Menu button not assigned in UIManager");
-        
+
         if (nextLevelButton != null)
             nextLevelButton.onClick.AddListener(() => GameManager.Instance?.LoadNextLevel());
         else
@@ -235,6 +264,7 @@ public class UIManager : MonoBehaviour
         if (taskPanel != null) taskPanel.SetActive(false);
         if (timerText != null) timerText.gameObject.SetActive(false);
         if (completionText != null) completionText.gameObject.SetActive(false);
+        if (penaltyPanel != null) penaltyPanel.SetActive(false);
         
         Debug.Log("Completion screen shown");
     }

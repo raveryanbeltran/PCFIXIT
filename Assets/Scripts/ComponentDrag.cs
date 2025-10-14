@@ -154,6 +154,14 @@ public class ComponentDrag : MonoBehaviour
 
         if (nearestSnapPoint != null)
         {
+            // NEW: Validate if this component can be snapped here
+            if (TaskManager.Instance != null && !TaskManager.Instance.ValidateSnap(nearestSnapPoint, componentName))
+            {
+                // Wrong component - don't snap and show error
+                StartCoroutine(FlashComponentRed());
+                return;
+            }
+
             // Final tool check before snapping
             if (requiresTool && !CheckToolRequirements())
             {
