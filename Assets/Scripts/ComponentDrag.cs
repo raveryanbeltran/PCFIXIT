@@ -7,6 +7,7 @@ public class ComponentDrag : MonoBehaviour
     private Vector3 offset;
     private Vector3 screenPoint;
     private Vector3 originalPosition;
+    private Quaternion originalRotation;
     private bool isDragging = false;
     private Transform currentSnapPoint = null;
 
@@ -20,6 +21,11 @@ public class ComponentDrag : MonoBehaviour
 
     [Header("Rotation Settings")]
     public bool lockRotation = true;
+    
+    [Header("Drag Rotation Settings")]
+    public bool useCustomDragRotation = false;
+    public Vector3 customDragRotation = Vector3.zero;
+    public bool maintainDragRotation = true; // Keep custom rotation while dragging
     
     [Header("Snap Behavior")]
     public bool useCustomSnapPosition = false;
@@ -49,45 +55,46 @@ public class ComponentDrag : MonoBehaviour
     void Start()
     {
         originalPosition = transform.position;
+        originalRotation = transform.rotation;
 
         // Handle pre-snapped initialization
-    if (startPreSnapped && preSnappedPoint != null)
-    {
-        InitializePreSnapped();
-    }
+        if (startPreSnapped && preSnappedPoint != null)
+        {
+            InitializePreSnapped();
+        }
     }
 
     private void InitializePreSnapped()
     {
-    if (preSnappedPoint == null)
-    {
-        Debug.LogWarning($"Pre-snapped point not assigned for {componentName}", this);
-        return;
-    }
+        if (preSnappedPoint == null)
+        {
+            Debug.LogWarning($"Pre-snapped point not assigned for {componentName}", this);
+            return;
+        }
 
-    // Check if the assigned snap point is available
-    if (occupiedSnapPoints.ContainsKey(preSnappedPoint) && occupiedSnapPoints[preSnappedPoint] != null)
-    {
-        Debug.LogWarning($"Pre-snapped point {preSnappedPoint.name} is already occupied for {componentName}", this);
-        return;
-    }
+        // Check if the assigned snap point is available
+        if (occupiedSnapPoints.ContainsKey(preSnappedPoint) && occupiedSnapPoints[preSnappedPoint] != null)
+        {
+            Debug.LogWarning($"Pre-snapped point {preSnappedPoint.name} is already occupied for {componentName}", this);
+            return;
+        }
 
-    // Occupy the snap point and position the component
-    OccupySnapPoint(preSnappedPoint);
-    
-    Vector3 finalPosition = CalculateSnapPosition(preSnappedPoint);
-    Quaternion finalRotation = CalculateSnapRotation();
-    
-    transform.SetPositionAndRotation(finalPosition, finalRotation);
-    
-    // Notify TaskManager if needed
-    if (TaskManager.Instance != null)
-    {
-        TaskManager.Instance.CompleteTask(componentName);
-        hasBeenSnapped = true;
-    }
-    
-    Debug.Log($"{componentName} started pre-snapped to {preSnappedPoint.name}");
+        // Occupy the snap point and position the component
+        OccupySnapPoint(preSnappedPoint);
+        
+        Vector3 finalPosition = CalculateSnapPosition(preSnappedPoint);
+        Quaternion finalRotation = CalculateSnapRotation();
+        
+        transform.SetPositionAndRotation(finalPosition, finalRotation);
+        
+        // Notify TaskManager if needed
+        if (TaskManager.Instance != null)
+        {
+            TaskManager.Instance.CompleteTask(componentName);
+            hasBeenSnapped = true;
+        }
+        
+        Debug.Log($"{componentName} started pre-snapped to {preSnappedPoint.name}");
     }
 
     private IEnumerator OnMouseDown()
@@ -109,6 +116,12 @@ public class ComponentDrag : MonoBehaviour
         offset = transform.position - Camera.main.ScreenToWorldPoint(
             new Vector3(Input.mousePosition.x, Input.mousePosition.y, screenPoint.z));
 
+        // NEW: Apply custom drag rotation when starting to drag
+        if (useCustomDragRotation)
+        {
+            ApplyCustomDragRotation();
+        }
+
         while (Input.GetMouseButton(0))
         {
             Vector3 curScreenPoint = new Vector3(Input.mousePosition.x, Input.mousePosition.y, screenPoint.z);
@@ -116,11 +129,24 @@ public class ComponentDrag : MonoBehaviour
 
             if (lockRotation)
             {
-                transform.SetPositionAndRotation(curPosition, Quaternion.identity);
+                // NEW: Maintain custom rotation while dragging if enabled
+                if (useCustomDragRotation && maintainDragRotation)
+                {
+                    transform.SetPositionAndRotation(curPosition, Quaternion.Euler(customDragRotation));
+                }
+                else
+                {
+                    transform.SetPositionAndRotation(curPosition, Quaternion.identity);
+                }
             }
             else
             {
                 transform.position = curPosition;
+                // NEW: Maintain custom rotation even when lockRotation is false
+                if (useCustomDragRotation && maintainDragRotation)
+                {
+                    transform.rotation = Quaternion.Euler(customDragRotation);
+                }
             }
 
             yield return new WaitForFixedUpdate();
@@ -131,6 +157,24 @@ public class ComponentDrag : MonoBehaviour
         if (enableSnapping)
         {
             TrySnapToPosition();
+        }
+        else
+        {
+            // NEW: Restore original rotation if not snapping
+            if (useCustomDragRotation && !maintainDragRotation)
+            {
+                transform.rotation = originalRotation;
+            }
+        }
+    }
+
+    // NEW METHOD: Apply custom rotation when dragging starts
+    private void ApplyCustomDragRotation()
+    {
+        if (useCustomDragRotation)
+        {
+            transform.rotation = Quaternion.Euler(customDragRotation);
+            Debug.Log($"Applied custom drag rotation: {customDragRotation} for {componentName}");
         }
     }
 
@@ -181,6 +225,14 @@ public class ComponentDrag : MonoBehaviour
                 hasBeenSnapped = true;
             }
         }
+        else
+        {
+            // NEW: Restore original rotation if no snap occurred
+            if (useCustomDragRotation && !maintainDragRotation)
+            {
+                transform.rotation = originalRotation;
+            }
+        }
     }
 
     // TOOL MANAGEMENT INTEGRATION
@@ -197,14 +249,14 @@ public class ComponentDrag : MonoBehaviour
         if (!canInstall)
         {
             string errorMessage = ToolManager.Instance.GetRequiredToolMessage(componentName);
-            ToolManager.ToolType requiredTool = ToolManager.Instance.GetRequiredToolType(componentName); // Fixed: Added ToolManager. prefix
+            ToolManager.ToolType requiredTool = ToolManager.Instance.GetRequiredToolType(componentName);
             ShowToolError(errorMessage, requiredTool);
         }
 
         return canInstall;
     }
 
-    private void ShowToolError(string message, ToolManager.ToolType requiredTool) // Fixed: Added ToolManager. prefix
+    private void ShowToolError(string message, ToolManager.ToolType requiredTool)
     {
         Debug.LogWarning($"Tool Error: {message}");
         
@@ -215,7 +267,7 @@ public class ComponentDrag : MonoBehaviour
         StartCoroutine(FlashComponentRed());
     }
 
-    private IEnumerator ShowEnhancedErrorText(string message, ToolManager.ToolType requiredTool) // Fixed: Added ToolManager. prefix
+    private IEnumerator ShowEnhancedErrorText(string message, ToolManager.ToolType requiredTool)
     {
         // Create world space UI text
         GameObject errorText = new GameObject("ErrorText");
@@ -301,7 +353,6 @@ public class ComponentDrag : MonoBehaviour
             ReleaseSnapPoint();
         }
 
-        // Update the static dictionary to track occupancy :cite[3]
         if (occupiedSnapPoints.ContainsKey(snapPoint))
         {
             occupiedSnapPoints[snapPoint] = this;
@@ -313,6 +364,7 @@ public class ComponentDrag : MonoBehaviour
 
         currentSnapPoint = snapPoint;
     }
+
     private void ReleaseSnapPoint()
     {
         if (currentSnapPoint != null && occupiedSnapPoints.ContainsKey(currentSnapPoint))
@@ -353,6 +405,12 @@ public class ComponentDrag : MonoBehaviour
         {
             // Restore appearance
         }
+    }
+
+    // NEW: Public method to check if component is being dragged
+    public bool IsDragging()
+    {
+        return isDragging;
     }
 
     // Draw gizmos so you can see the offset in the Scene view

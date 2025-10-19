@@ -217,6 +217,9 @@ MonoBehaviour:
   snapPoints:
   - {fileID: 1196680620}
   lockRotation: 0
+  useCustomDragRotation: 0
+  customDragRotation: {x: 0, y: 0, z: 0}
+  maintainDragRotation: 1
   useCustomSnapPosition: 0
   customSnapPosition: {x: 0, y: 0, z: 0}
   useCustomSnapRotation: 0
@@ -259,11 +262,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8610fe9a8bb9f14ab0f7a040949d1aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  componentName: ThunderWatt 650
-  description: Mid-range semi-modular PSU that balances cost and flexibility. Core
+  componentName: ThunderWatt 300
+  description: Low-range semi-modular PSU that balances cost and flexibility. Core
     cables are fixed, but GPU and SATA lines can be swapped as needed.
   type: Semi-Modular
-  specifications: 650W | 80+ Silver | ATX
+  specifications: 300W | 80+ Silver | ATX
   infoPanelPrefab: {fileID: 459889013087606852, guid: d6a2c150708d5704d9ade001205a0165, type: 3}
   screenOffset: {x: 0, y: 120}
 --- !u!1 &159380443
@@ -2555,8 +2558,7 @@ MonoBehaviour:
   description: A mid-tier graphics card ideal for casual gaming and media editing.
     Efficient, but still needs stable power under load.
   type: Graphics Card
-  specifications: 'Power Draw: 90W  Recommended PSU: 500W or higher  1x 6-pin Power
-    Connector'
+  specifications: 'Power Draw: 90W  Recommended PSU: 500W or higher'
   infoPanelPrefab: {fileID: 459889013087606852, guid: d6a2c150708d5704d9ade001205a0165, type: 3}
   screenOffset: {x: 0, y: 120}
 --- !u!65 &899189727
@@ -2618,6 +2620,9 @@ MonoBehaviour:
   snapPoints:
   - {fileID: 1196680620}
   lockRotation: 0
+  useCustomDragRotation: 0
+  customDragRotation: {x: 0, y: 0, z: 0}
+  maintainDragRotation: 1
   useCustomSnapPosition: 0
   customSnapPosition: {x: 0, y: 0, z: 0}
   useCustomSnapRotation: 0
@@ -2660,11 +2665,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8610fe9a8bb9f14ab0f7a040949d1aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  componentName: ThunderWatt 650
-  description: Mid-range semi-modular PSU that balances cost and flexibility. Core
+  componentName: ThunderWatt 300
+  description: Low-range semi-modular PSU that balances cost and flexibility. Core
     cables are fixed, but GPU and SATA lines can be swapped as needed.
   type: Semi-Modular
-  specifications: 650W | 80+ Silver | ATX
+  specifications: 300W | 80+ Silver | ATX
   infoPanelPrefab: {fileID: 459889013087606852, guid: d6a2c150708d5704d9ade001205a0165, type: 3}
   screenOffset: {x: 0, y: 120}
 --- !u!1 &1180721635
@@ -3761,6 +3766,9 @@ MonoBehaviour:
   snapPoints:
   - {fileID: 1196680620}
   lockRotation: 0
+  useCustomDragRotation: 0
+  customDragRotation: {x: 0, y: 0, z: 0}
+  maintainDragRotation: 1
   useCustomSnapPosition: 0
   customSnapPosition: {x: 0, y: 0, z: 0}
   useCustomSnapRotation: 0
@@ -3804,7 +3812,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   componentName: PowerCore Basic 500
-  description: A standard non-modular power supply with pre-attached cables. Affordable,
+  description: A standard-performance, non-modular with pre-attached cables. Affordable,
     reliable, but not great for cable management.
   type: Non-Modular
   specifications: 500W | 80+ Bronze | ATX
@@ -4418,6 +4426,9 @@ MonoBehaviour:
   snapPoints:
   - {fileID: 1196680620}
   lockRotation: 0
+  useCustomDragRotation: 0
+  customDragRotation: {x: 0, y: 0, z: 0}
+  maintainDragRotation: 1
   useCustomSnapPosition: 0
   customSnapPosition: {x: 0, y: 0, z: 0}
   useCustomSnapRotation: 0
@@ -4460,11 +4471,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8610fe9a8bb9f14ab0f7a040949d1aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  componentName: VoltEdge Pro 750
-  description: A high-performance, fully modular PSU built for advanced gaming rigs.
-    Every cable can be customized for clean cable management.
+  componentName: VoltEdge 450
+  description: A standard fully modular power supply. Every cable can be customized
+    for clean cable management.
   type: Fully Modular
-  specifications: 750W | 80+ Gold | ATX
+  specifications: 450W | 80+ Gold | ATX
   infoPanelPrefab: {fileID: 459889013087606852, guid: d6a2c150708d5704d9ade001205a0165, type: 3}
   screenOffset: {x: 0, y: 120}
 --- !u!1 &1804105437
